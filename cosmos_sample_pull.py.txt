@@ -1,0 +1,68 @@
+#!/bin/python
+import sys, Util, ShipSlotGen, Location
+sys.path.append('/home/davidb/bloodlab/lib/pylib')
+import Loc, Location
+from CommonConnection import conn
+locgen=Location.Location()
+cursor=conn.cursor()
+
+slocs=ShipSlotGen.ShipSlotGen(nrows=10,ncols=10)
+slocs1=ShipSlotGen.ShipSlotGen(nrows=10,ncols=10)
+
+infile=open('/gem-v/studies/blood/studies/cosmos/projects/aging pilot:310/request_files/cosmos_pull_pairs.csv')
+header=infile.readline()
+lines=infile.readlines()
+
+sql_blserum="""select location, vid1, vid2, vid3 from sample where sample_id=%(sample_id)s and vid1 in (10,11,12,13) and study_id=600"""
+sql_1serum="""select location, vid1, vid2, vid3 from sample where sample_id=%(sample_id)s and vid1 in (50,51,52,53) and study_id=600"""
+sql_blbuff="""select location, vid1, vid2, vid3 from sample where sample_id=%(sample_id)s and vid1 in (7,8) and study_id=600"""
+sql_1buff="""select location, vid1, vid2, vid3 from sample where sample_id=%(sample_id)s and vid1 in (47,48) and study_id=600"""
+
+loc_lst=[]
+n=0
+
+for i in lines:
+	i=i.rstrip()
+	i=i.split(',')
+	sample_id,gender,age,pair_num=i
+	rec={'sample_id': sample_id}
+	cursor.execute(sql_blserum,rec)
+	r=cursor.fetchone()
+	bls_location=r[0]
+	bls_vid=str(r[1])+'.'+str(r[2])+'.'+str(r[3])
+	bls_type='BL Serum'
+	cursor.execute(sql_1serum,rec)
+	r=cursor.fetchone()
+	s1_location=r[0]
+	s1_vid=str(r[1])+'.'+str(r[2])+'.'+str(r[3])
+	s1_type='1yr Serum'
+	cursor.execute(sql_blbuff,rec)
+	r=cursor.fetchone()
+	blb_location=r[0]
+	blb_vid=str(r[1])+'.'+str(r[2])+'.'+str(r[3])
+	blb_type='BL Buffy'
+	cursor.execute(sql_1buff,rec)
+	r=cursor.fetchone()
+	b1_location=r[0]
+	b1_vid=str(r[1])+'.'+str(r[2])+'.'+str(r[3])
+	b1_type='1yr Buffy'
+	loc_lst.append([bls_location, sample_id, bls_vid, bls_type])
+	loc_lst.append([s1_location, sample_id, s1_vid, s1_type])
+	loc_lst.append([blb_location, sample_id, blb_vid, blb_type])
+	loc_lst.append([b1_location, sample_id, b1_vid, b1_type])
+
+loc_lst.sort()
+for i in loc_lst:
+	n+=1
+	location, sample_id, vid, samp_type=i
+	locgen.set(location)
+	locgen.printIfNewBoxorRack(6)
+	if samp_type=='BL Serum' or samp_type=='1yr Serum':
+		tsloc=slocs.strNext()
+		tsloc = 'S ' + tsloc
+	if samp_type=='BL Buffy' or samp_type=='1yr Buffy':
+		tsloc=slocs1.strNext()
+		tsloc= 'B ' + tsloc
+	print '%s|%s|%s|%s|%s|%s' % (n, sample_id,vid, str(locgen),samp_type, tsloc)
+
+#print len(loc_lst)
